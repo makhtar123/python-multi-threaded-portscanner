@@ -15,7 +15,7 @@ Multi-threaded network reconnaissance tool built with Python. It performs both s
 1.  Clone the repository:
     ```bash
     git clone https://github.com/makhtar123/python-multi-threaded-portscanner.git
-    cd port-scanner
+    cd python-multi-threaded-portscanner
     ```
 
 2.  Install dependencies:
