@@ -1,6 +1,6 @@
 # Python Multi-Threaded Port Scanner
 
-Multi-threaded network reconnaissance tool built with Python. It performs both standard TCP Connect scans and stealth SYN (Half-Open) scans using raw packet manipulation via Scapy.
+Multi-threaded network reconnaissance tool built with Python. It performs both standard TCP Connect scans and stealth SYN (Half-Open) scans using raw packet manipulation via Scapy. 
 
 ## Features
 
@@ -25,11 +25,11 @@ Multi-threaded network reconnaissance tool built with Python. It performs both s
 
 ## Usage
 
-**Note:** SYN scans and Host Discovery require `sudo` (Root) privileges.
+**Note:** Must run application with sudo or as root since scapy requires sudo/root privilege.
 
 ### 1. Standard Connect Scan (Safe Mode)
 ```bash
-python netscan.py -t 192.168.1.1 -sT
+sudo python netscan.py -t 192.168.1.1 -sT
 ```
 
 ### 2. Stealth SYN Scan + Banner Grabbing
