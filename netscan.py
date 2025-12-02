@@ -4,6 +4,7 @@ import queue
 import argparse
 import sys
 import os
+import errno  # <--- NEW IMPORT
 from scapy.all import IP, TCP, ICMP, sr1, send
 from top_1000_ports import common_ports
 
@@ -16,6 +17,8 @@ class PortScanner:
         self.banner_opt = banner_opt
         self.no_ping = no_ping
         
+        self.show_filter = False # <--- NEW FLAG (Default to False)
+
         # Encapsulated State
         self.q = queue.Queue()
         self.lock = threading.Lock()
@@ -63,6 +66,7 @@ class PortScanner:
             result = sock.connect_ex((self.target, port)) 
             
             if result == 0:
+                # --- OPEN PORT LOGIC ---
                 if self.banner_opt == 1:
                     if port == 80:
                         provoke_msg = "HEAD / HTTP/1.1\r\nHost: " + str(self.target) + "\r\n\r\n"
@@ -85,7 +89,18 @@ class PortScanner:
                             print(f"Port {port}: OPEN - {default_service}")
                     except socket.error:
                         with self.lock:
-                            print(f"Port {port}: OPEN - UNKOWN")       
+                            print(f"Port {port}: OPEN - UNKNOWN")
+            
+            # --- NEW LOGIC: CLOSED/FILTERED ---
+            elif self.show_all:
+                if result == errno.ECONNREFUSED:
+                    with self.lock:
+                        print(f"Port {port}: CLOSED")
+                else:
+                    # If it's not 0 (Open) and not Refused (Closed), it timed out (Filtered)
+                    with self.lock:
+                        print(f"Port {port}: FILTERED")
+
         except socket.error:
             pass
         finally:
@@ -96,8 +111,17 @@ class PortScanner:
         try:
             packet = IP(dst=self.target) / TCP(dport=port, flags='S')
             response = sr1(packet, timeout=1, verbose=0)
-            if response is not None and response.haslayer(TCP):
+            
+            # Check for Filtered (Timeout / None)
+            if response is None:
+                if self.show_all:
+                    with self.lock:
+                        print(f"Port {port}: FILTERED")
+            
+            elif response.haslayer(TCP):
                 flags = response[TCP].flags
+                
+                # Check for Open (SYN-ACK)
                 if flags == 0x12:
                     if self.banner_opt == 1:
                         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -131,6 +155,11 @@ class PortScanner:
 
                     rst_packet = IP(dst=self.target) / TCP(dport=port, flags='R')
                     send(rst_packet, verbose=0)
+                
+                # Check for Closed (RST or RST-ACK)
+                elif (flags == 0x14 or flags == 0x04) and self.show_all:
+                    with self.lock:
+                        print(f"Port {port}: CLOSED")
 
         except socket.error:
             pass
@@ -153,7 +182,10 @@ class PortScanner:
         if start and end and port_list:
             print("Either pick a range of ports or a list of ports")
             sys.exit(1)
+        
+        # CASE 1: Specific List (Enable show_all)
         elif port_list:
+            self.show_all = True # <--- ENABLE FLAG HERE
             port_string = ' '.join(port_list)
             final_list = port_string.replace(',', ' ').split()
             for port in final_list:
@@ -167,13 +199,19 @@ class PortScanner:
                         print(f"Port out of range ignored: {port_num}")
                 except ValueError:
                     print(f"Invalid Port ignored: {port}")
+        
+        # CASE 2: Range (Disable show_all)
         elif start and end:
+            self.show_all = False # <--- Ensure it is False
             if start > end:
                 print("Start port can't be greater than end port")
                 sys.exit(1)
             for i in range(start, end + 1):
                 self.q.put(i)
+        
+        # CASE 3: Default (Disable show_all)
         else:
+            self.show_all = False # <--- Ensure it is False
             print("Scanning 1000 most common ports")
             for i in common_ports:
                 self.q.put(i)
