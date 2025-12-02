@@ -8,7 +8,6 @@ Multi-threaded network reconnaissance tool built with Python. It performs both s
 *   **Multi-Threading:** Utilizes the Producer-Consumer pattern (Queue) to scan ports concurrently for high performance.
 *   **Service Enumeration:** Performs active banner grabbing to identify running services.
 *   **Host Discovery:** Implements a smart "Combo Check" (ICMP + TCP 80 + TCP 443) to detect live hosts behind firewalls.
-*   **Smart Fallbacks:** Automatically detects root privileges and switches scan modes accordingly.
 
 ## Installation
 
