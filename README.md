@@ -36,6 +36,11 @@ sudo python netscan.py -t 192.168.1.1 -sT
 sudo python netscan.py -t 192.168.1.1 -sV
 ```
 
+### 3. UDP Scan
+```bash
+sudo python netscan.py -t 192.168.1.1 -sU
+```
+
 ### 3. Scan Specific Port Range
 ```bash
 sudo python netscan.py -t 192.168.1.1 -sp 1 -ep 80
