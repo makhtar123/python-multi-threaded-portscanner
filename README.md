@@ -59,6 +59,7 @@ sudo python netscan.py -t 192.168.1.1 -p 1 2 3 4
 | `-sp` | `--startport` | Starting port for a range scan. | No |
 | `-ep` | `--endport` | Ending port for a range scan. | No |
 | `-sT` | `--connect` | Perform a full TCP Connect Scan (Non-Sudo). | No |
+| `-sU` | `--udpscan` | Performs a UDP scan (requires sudo) | No |
 | `-sV` | `--serviceversion` | Enable active banner grabbing. | No |
 | `-Pn` | `--noping` | Skip host discovery (useful for firewalls). | No |
 | `-T` | `--threads` | Set number of threads (Default: 100). | No |
