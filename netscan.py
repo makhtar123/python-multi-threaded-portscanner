@@ -5,7 +5,7 @@ import argparse
 import sys
 import os
 import codecs
-import errno  # <--- NEW IMPORT
+import errno  
 from scapy.all import IP, TCP, UDP, ICMP, sr1, send, Raw, DNS, DNSQR
 from top_1000_ports import common_ports
 
@@ -54,7 +54,7 @@ class PortScanner:
         self.banner_opt = banner_opt
         self.no_ping = no_ping
         
-        self.show_all = False # <--- NEW FLAG (Default to False)
+        self.show_all = False # # Show closed/filtered states for explicit port lists
         self.udp_payloads = load_udp_payloads()
 
         # Encapsulated State
@@ -109,7 +109,7 @@ class PortScanner:
             
             if result == 0:
                 # --- OPEN PORT LOGIC ---
-                if self.banner_opt == 1:
+                if self.banner_opt:
                     if port == 80:
                         provoke_msg = "HEAD / HTTP/1.1\r\nHost: " + str(self.target) + "\r\n\r\n"
                         sock.send(provoke_msg.encode())
@@ -167,7 +167,7 @@ class PortScanner:
                 
                 # Check for Open (SYN-ACK)
                 if flags == 0x12:
-                    if self.banner_opt == 1:
+                    if self.banner_opt:
                         """
                         Scapy operates at too low of a level to easily read web server banners. Temporarily
                         need to switch to standard Python socket function to complete a full connection and 
@@ -199,7 +199,7 @@ class PortScanner:
                             default_service = socket.getservbyport(port, 'tcp')
                             with self.lock:
                                 print(f"Port {port}: OPEN - {default_service}")
-                        except:
+                        except OSError:
                             with self.lock:
                                 print(f"Port {port}: OPEN - UNKNOWN")
                     # Send RST Packet after getting a SYN-ACK response
@@ -300,7 +300,7 @@ class PortScanner:
         
         # CASE 1: Specific List (Enable show_all)
         elif port_list:
-            self.show_all = True # <--- ENABLE FLAG HERE
+            self.show_all = True 
             port_string = ' '.join(port_list)
             final_list = port_string.replace(',', ' ').split()
             for port in final_list:
@@ -316,8 +316,8 @@ class PortScanner:
                     print(f"Invalid Port ignored: {port}")
         
         # CASE 2: Range (Disable show_all)
-        elif start and end:
-            self.show_all = False # <--- Ensure it is False
+        elif start is not None and end is not None:
+            self.show_all = False 
             if start > end:
                 print("Start port can't be greater than end port")
                 sys.exit(1)
@@ -326,14 +326,14 @@ class PortScanner:
         
         # CASE 3: Default (Disable show_all)
         else:
-            self.show_all = False # <--- Ensure it is False
+            self.show_all = False
             print("Scanning 1000 most common ports")
             for i in common_ports:
                 self.q.put(i)
 
     def run(self):
-        # 1. Check Sudo (if SYN)
-        if self.scan_type == 1 and os.geteuid() != 0:
+        # 1. Check Sudo (if SYN or UDP)
+        if self.scan_type in (1, 2) and os.geteuid() != 0:
             print("Need Sudo.")
             sys.exit(1)
 
@@ -362,15 +362,20 @@ def parse_arguments():
     parser.add_argument("-sU", "--udpscan", action="store_true", help="Enable UDP Scan")
     parser.add_argument("-sV", "--serviceversion",action="store_true", help="Enable Service Version Detection")
     parser.add_argument("-Pn", "--noping", action="store_true", help="Skip Host Discovery")
-    parser.add_argument("-T", "--threads", type=int, help="Set the amount of threads. Default is 100")
+    parser.add_argument("-T", "--threads", type=int, help="Set the amount of threads. Default is 100 for Connect, 25 for SYN, and 15 for UDP")
     return parser.parse_args()
 
 def main():
     args = parse_arguments()
-    if args.udpscan: # or SYN scan
-        default_threads = 15  # Scapy/Raw Packets need breathing room
-    else:             # Connect Scan (standard sockets)
-        default_threads = 100 # Standard sockets handle concurrency better
+    # Use fewer threads for SYN/UDP scans because Scapy's sr1() is not ideal for
+    # heavy concurrent use. Too many threads can cause missed or mismatched packet
+    # responses, leading to inaccurate scan results.
+    if args.connect:
+        default_threads = 100
+    elif args.udpscan:
+        default_threads = 15
+    else:
+        default_threads = 25
     if args.connect:
         # User explicitly chose Connect Scan
         scan_type = 0
