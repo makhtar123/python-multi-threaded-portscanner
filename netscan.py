@@ -54,7 +54,7 @@ class PortScanner:
         self.banner_opt = banner_opt
         self.no_ping = no_ping
         
-        self.show_filter = False # <--- NEW FLAG (Default to False)
+        self.show_all = False # <--- NEW FLAG (Default to False)
         self.udp_payloads = load_udp_payloads()
 
         # Encapsulated State
@@ -294,7 +294,7 @@ class PortScanner:
         Function acts a producer, filling the queue 
         with port numbers for the threads to scan
         """
-        if start and end and port_list:
+        if start is not None and end is not None and port_list:
             print("Either pick a range of ports or a list of ports")
             sys.exit(1)
         
@@ -367,6 +367,10 @@ def parse_arguments():
 
 def main():
     args = parse_arguments()
+    if args.udpscan: # or SYN scan
+        default_threads = 15  # Scapy/Raw Packets need breathing room
+    else:             # Connect Scan (standard sockets)
+        default_threads = 100 # Standard sockets handle concurrency better
     if args.connect:
         # User explicitly chose Connect Scan
         scan_type = 0
@@ -384,7 +388,7 @@ def main():
     scanner = PortScanner(
         target=args.target,
         scan_type=scan_type,
-        threads=args.threads or 100,
+        threads=args.threads or default_threads,
         banner_opt=args.serviceversion,
         no_ping=args.noping
     )
