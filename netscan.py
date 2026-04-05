@@ -54,7 +54,7 @@ class PortScanner:
         self.banner_opt = banner_opt
         self.no_ping = no_ping
         
-        self.show_all = False # # Show closed/filtered states for explicit port lists
+        self.show_all = False #  Show closed/filtered states for explicit port lists
         self.udp_payloads = load_udp_payloads()
 
         # Encapsulated State
