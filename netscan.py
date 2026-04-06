@@ -55,7 +55,11 @@ class PortScanner:
         self.no_ping = no_ping
         
         self.show_all = False #  Show closed/filtered states for explicit port lists
-        self.udp_payloads = load_udp_payloads()
+        
+        if self.scan_type == 2:
+            self.udp_payloads = load_udp_payloads()
+        else:
+            self.udp_payloads = {}
 
         # Encapsulated State
         self.q = queue.Queue()
@@ -136,13 +140,18 @@ class PortScanner:
             
 
             elif self.show_all:
+                try:
+                    service_name = socket.getservbyport(port, 'tcp')
+                except OSError:
+                    service_name = "UNKNOWN"
+
                 if result == errno.ECONNREFUSED:
                     with self.lock:
-                        print(f"Port {port}: CLOSED")
+                        print(f"Port {port}: CLOSED - {service_name}")
                 else:
                     # If it's not 0 (Open) and not Refused (Closed), it timed out (Filtered)
                     with self.lock:
-                        print(f"Port {port}: FILTERED")
+                        print(f"Port {port}: FILTERED - {service_name}")
 
         except socket.error:
             pass
@@ -152,6 +161,10 @@ class PortScanner:
 
     def _syn_scan(self, port):
         try:
+            try:
+                service_name = socket.getservbyport(port, 'tcp')
+            except OSError:
+                service_name = "UNKNOWN"
             # crafting syn packet
             packet = IP(dst=self.target) / TCP(dport=port, flags='S')
             response = sr1(packet, timeout=1, verbose=0)
@@ -160,7 +173,7 @@ class PortScanner:
             if response is None:
                 if self.show_all:
                     with self.lock:
-                        print(f"Port {port}: FILTERED")
+                        print(f"Port {port}: FILTERED - {service_name}")
             
             elif response.haslayer(TCP):
                 flags = response[TCP].flags
@@ -209,7 +222,7 @@ class PortScanner:
                 # Check for Closed (RST or RST-ACK)
                 elif (flags == 0x14 or flags == 0x04) and self.show_all:
                     with self.lock:
-                        print(f"Port {port}: CLOSED")
+                        print(f"Port {port}: CLOSED - {service_name}")
 
         except socket.error:
             pass
