@@ -380,9 +380,11 @@ def parse_arguments():
 
 def main():
     args = parse_arguments()
-    # Use fewer threads for SYN/UDP scans because Scapy's sr1() is not ideal for
-    # heavy concurrent use. Too many threads can cause missed or mismatched packet
-    # responses, leading to inaccurate scan results.
+    """ 
+    Use fewer threads for SYN/UDP scans because Scapy's sr1() is not ideal for
+    heavy concurrent use. Too many threads can cause missed or mismatched packet
+    responses, leading to inaccurate scan results.
+    """
     if args.connect:
         default_threads = 100
     elif args.udpscan:
